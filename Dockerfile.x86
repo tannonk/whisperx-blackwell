@@ -1,0 +1,38 @@
+# WhisperX ASR service for x86_64 with NVIDIA GPU (CUDA 12.6)
+# For ARM64 + Blackwell (DGX Spark), use Dockerfile.gpu instead.
+FROM pytorch/pytorch:2.6.0-cuda12.6-cudnn9-runtime
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# NOTE: transformers<5.0.0 is required because:
+#       - whisperx==3.8.5     depends on huggingface-hub<1.0.0
+#       - transformers<5.0.0  requires   huggingface-hub<1.0.0
+#       - transformers>=5.0.0 requires   huggingface-hub>=1.0.0
+RUN pip install --no-cache-dir \
+    "fastapi==0.136.0" \
+    "faster-whisper==1.2.1" \
+    "matplotlib==3.10.8" \
+    "nltk==3.9.4" \
+    "pyannote.audio==4.0.4" \
+    "python-multipart==0.0.26" \
+    "semver==3.0.4" \
+    "torchaudio==2.6.0" \
+    "transformers<5.0.0" \
+    "uvicorn[standard]==0.44.0" \
+    "whisperx==3.8.5"
+
+ENV WHISPER_MODEL="large-v3"
+
+COPY app/ /app/app/
+
+EXPOSE 8003
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8003/health || exit 1
+
+CMD ["uvicorn", "app.main_gpu:app", "--host", "0.0.0.0", "--port", "8003"]
