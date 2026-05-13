@@ -87,9 +87,10 @@ async def lifespan(app: FastAPI):
         logger.info(f"   Compute Capability (reported): SM_{cap[0]}{cap[1]}")
 
     # Load Whisper model
-    logger.info("📦 Loading Whisper large-v3...")
+    _model_name = os.getenv("WHISPER_MODEL", "large-v3")
+    logger.info(f"📦 Loading Whisper model: {_model_name}")
     whisperx_model = whisperx.load_model(
-        "large-v3",
+        _model_name,
         device=device,
         compute_type=compute_type
     )
@@ -118,7 +119,7 @@ async def health():
         "service": "whisperx-batch-gpu",
         "device": device,
         "diarization_device": device,  # GPU diarization enabled!
-        "model": "whisper-large-v3",
+        "model": os.getenv("WHISPER_MODEL", "large-v3"),
         "cuda_available": torch.cuda.is_available(),
         "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
         "compute_capability": f"SM_{cap[0]}{cap[1]}"
@@ -252,7 +253,7 @@ async def root():
         "platform": "NVIDIA DGX Spark (Blackwell)",
         "endpoint": "POST /transcribe",
         "features": [
-            "Perfect transcription (Whisper large-v3)",
+            f"Perfect transcription ({os.getenv('WHISPER_MODEL', 'large-v3')})",
             "Word-level timestamps (Wav2Vec2 alignment)",
             "Speaker diarization (pyannote.audio) - GPU ACCELERATED",
             "Full GPU acceleration (Blackwell SM_121 → SM_90 spoof)"
